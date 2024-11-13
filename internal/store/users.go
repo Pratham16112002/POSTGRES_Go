@@ -12,7 +12,6 @@ type User struct {
 	Password  string `json:"-"`
 	CreatedAt string `json:"created_at"`
 }
-
 type UserStore struct {
 	db *sql.DB
 }

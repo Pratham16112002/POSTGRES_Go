@@ -1,7 +1,9 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"log"
 	"time"
 )
 
@@ -11,8 +13,14 @@ func NewDB(addr string, maxOpenConns int, maxIdleConns int, maxIdleTime string) 
 	db.SetMaxOpenConns(maxOpenConns)
 	parsedTime, _ := time.ParseDuration(maxIdleTime)
 	db.SetConnMaxIdleTime(parsedTime)
+	ctx, cnl_fn := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cnl_fn()
+	if err := db.PingContext(ctx); err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, err
 	}
+	log.Println("Database connection successfull : ", db.Stats())
 	return db, err
 }
