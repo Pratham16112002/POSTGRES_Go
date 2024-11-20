@@ -37,6 +37,24 @@ func (app *application) mount() *chi.Mux {
 		r.Get("/health", app.healthCheckHandler)
 		r.Route("/posts", func(r chi.Router) {
 			r.Post("/", app.createPostHandler)
+			r.Route("/{postId}", func(r chi.Router) {
+				r.Use(app.postsContextMiddleware)
+				r.Get("/", app.getPostHanlder)
+				r.Delete("/", app.deletePostHandler)
+				r.Patch("/", app.updatePostHandler)
+				r.Post("/comments", app.postCommentHandler)
+			})
+		})
+		r.Route("/users", func(r chi.Router) {
+			r.Route("/{userId}", func(r chi.Router) {
+				r.Use(app.usersContextMiddleware)
+				r.Get("/", app.getUserHandler)
+				r.Put("/follow", app.followUserHandler)
+				r.Put("/unfollow", app.unfollowUserHandler)
+			})
+			r.Group(func(r chi.Router) {
+				r.Get("/feed", app.getUserFeedHandler)
+			})
 		})
 	})
 	// posts
