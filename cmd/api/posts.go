@@ -115,7 +115,7 @@ func (app *application) createPostHandler(res http.ResponseWriter, req *http.Req
 		app.badRequestError(res, req, err)
 		return
 	}
-	userID := 1
+	userID := 2
 	post := &store.Post{
 		UserId:  int64(userID),
 		Title:   payload.Title,

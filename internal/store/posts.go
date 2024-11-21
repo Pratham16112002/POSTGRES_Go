@@ -16,15 +16,15 @@ type Post struct {
 	UserId    int64     `json:"user_id"`
 	Tags      []string  `json:"tags"`
 	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Comments  []Comment `json:"comments"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	Comments  []Comment `json:"comments,omitempty"`
 	Version   int       `json:"version"`
 	User      User      `json:"user"`
 }
 
 type PostWithMetaData struct {
 	Post
-	CommentCount int `json:"comment_count"`
+	CommentCount int64 `json:"comment_count"`
 }
 
 type PostStore struct {
@@ -44,8 +44,66 @@ func (s *PostStore) GetById(ctx context.Context, id int64) (*Post, error) {
 	return &post, nil
 }
 
-func (s *PostStore) GetUserFeed(ctx context.Context, userId int64) ([]PostWithMetaData, error) {
-	query
+func (s *PostStore) GetUserFeed(ctx context.Context, userId int64, pageQuery PaginatedFeedQuery) ([]PostWithMetaData, error) {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+	query := `SELECT
+	p.id,
+	p.user_id,
+	p.title,
+	p.content,
+	p.created_at,
+	p.updated_at,
+	p.version,
+	p.tags,
+	u.username,
+	COUNT(c.id) AS comment_count
+FROM
+	posts p
+	LEFT JOIN comments c ON p.id = c.post_id
+	LEFT JOIN users u ON p.user_id = u.id
+	JOIN followers f ON f.follower_id = p.user_id
+		OR p.user_id = $1 
+WHERE
+	f.user_id = $1 
+	AND
+	(
+	p.title ILIKE  '%' || $2 || '%'
+	OR
+	p.content ILIKE  '%' || $2 || '%'
+	)
+	AND
+	( p.tags @> $3 OR $3 = '{}' )
+	AND
+	p.created_at > TO_TIMESTAMP($4,'YYYY-MM-DD"T"HH24:MI:SSOF')
+	AND
+	p.created_at < TO_TIMESTAMP($5,'YYYY-MM-DD"T"HH24:MI:SSOF')
+GROUP BY
+	p.id,u.username
+ORDER BY
+	p.created_at ` + pageQuery.Sort + ` LIMIT $6 OFFSET $7;`
+
+	rows, err := s.db.QueryContext(ctx, query, userId,
+		pageQuery.Search, pq.Array(pageQuery.Tags),
+		pageQuery.Since, pageQuery.Until,
+		pageQuery.Limit, pageQuery.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	feed := []PostWithMetaData{}
+	for rows.Next() {
+		var p PostWithMetaData
+		err := rows.Scan(&p.ID, &p.UserId, &p.Title,
+			&p.Content, &p.CreatedAt, &p.UpdatedAt, &p.Version,
+			pq.Array(&p.Tags),
+			&p.User.Username, &p.CommentCount)
+		if err != nil {
+			return nil, err
+		}
+		feed = append(feed, p)
+	}
+	return feed, nil
 }
 
 func (s *PostStore) Delete(ctx context.Context, postID int64) error {
