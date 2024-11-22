@@ -3,11 +3,12 @@ package db
 import (
 	"context"
 	"database/sql"
-	"log"
 	"time"
+
+	"go.uber.org/zap"
 )
 
-func NewDB(addr string, maxOpenConns int, maxIdleConns int, maxIdleTime string) (*sql.DB, error) {
+func NewDB(addr string, maxOpenConns int, maxIdleConns int, maxIdleTime string, logger *zap.SugaredLogger) (*sql.DB, error) {
 	db, err := sql.Open("postgres", addr)
 	db.SetMaxIdleConns(maxIdleConns)
 	db.SetMaxOpenConns(maxOpenConns)
@@ -21,6 +22,6 @@ func NewDB(addr string, maxOpenConns int, maxIdleConns int, maxIdleTime string) 
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Database connection successfull : ", db.Stats())
+	logger.Infof("database connection successfull", db.Stats())
 	return db, err
 }

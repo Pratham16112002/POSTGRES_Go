@@ -3,8 +3,11 @@ package main
 import (
 	"Blog/internal/db"
 	"Blog/internal/env"
+	"Blog/internal/mailer"
 	"Blog/internal/store"
-	"log"
+	"time"
+
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -17,18 +20,35 @@ func main() {
 			maxIdleConns: env.GetInt("DB_MAX_IDLE_CONNS", 30),
 			maxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15m"),
 		},
+		env:         env.GetString("ENV", "development"),
+		frontendURL: env.GetString("FRONTEND_URL", "http://localhost:3002"),
+		mail: mailConfig{
+			exp:       time.Minute * 10,
+			fromEmail: env.GetString("FROM_EMAIL", "blogspot@support.com"),
+			sendGrid: SendGridConfig{
+				apiKey: env.GetString("SENDGRID_API_KEY", ""),
+			},
+		},
 	}
-	db, err := db.NewDB(cfg.db.addr, cfg.db.maxOpenConns, cfg.db.maxIdleConns, cfg.db.maxIdleTime)
+	// Mailer
+	mailer := mailer.NewSendgrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
+	// Logger
+	logger := zap.Must(zap.NewProduction()).Sugar()
+	defer logger.Sync()
+	// Database
+	db, err := db.NewDB(cfg.db.addr, cfg.db.maxOpenConns, cfg.db.maxIdleConns, cfg.db.maxIdleTime, logger)
 	if err != nil {
-		log.Fatal("Data base connection failed", err)
+		logger.Fatal("Data base connection failed", err)
 	}
 	defer db.Close()
 	store := store.NewPostgresStore(db)
 	app := &application{
 		config: cfg,
 		store:  store,
+		logger: logger,
+		mailer: mailer,
 	}
-	log.Printf("Server is starting on %v\n", cfg.addr)
+	logger.Info("Server is starting on %v\n", cfg.addr)
 	mux := app.mount()
-	log.Fatal(app.run(mux))
+	logger.Fatal(app.run(mux))
 }

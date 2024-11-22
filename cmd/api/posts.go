@@ -46,7 +46,6 @@ func (app *application) getPostHanlder(res http.ResponseWriter, req *http.Reques
 		app.internalServerError(res, req, err)
 		return
 	}
-
 }
 
 func (app *application) updatePostHandler(res http.ResponseWriter, req *http.Request) {

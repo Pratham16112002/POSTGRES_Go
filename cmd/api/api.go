@@ -1,17 +1,21 @@
 package main
 
 import (
+	"Blog/internal/mailer"
 	"Blog/internal/store"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 )
 
 type application struct {
 	config config
 	store  store.Storage
+	logger *zap.SugaredLogger
+	mailer mailer.Client
 }
 
 type dbConfig struct {
@@ -22,8 +26,21 @@ type dbConfig struct {
 }
 
 type config struct {
-	addr string
-	db   dbConfig
+	addr        string
+	db          dbConfig
+	env         string
+	frontendURL string
+	mail        mailConfig
+}
+
+type mailConfig struct {
+	exp       time.Duration
+	fromEmail string
+	sendGrid  SendGridConfig
+}
+
+type SendGridConfig struct {
+	apiKey string
 }
 
 func (app *application) mount() *chi.Mux {
@@ -46,6 +63,7 @@ func (app *application) mount() *chi.Mux {
 			})
 		})
 		r.Route("/users", func(r chi.Router) {
+			r.Put("/active/{token}", app.userActivationHandler)
 			r.Route("/{userId}", func(r chi.Router) {
 				r.Use(app.usersContextMiddleware)
 				r.Get("/", app.getUserHandler)
@@ -55,6 +73,10 @@ func (app *application) mount() *chi.Mux {
 			r.Group(func(r chi.Router) {
 				r.Get("/feed", app.getUserFeedHandler)
 			})
+		})
+		// Public routes
+		r.Route("/authentication", func(r chi.Router) {
+			r.Post("/user", app.userRegisterHandler)
 		})
 	})
 	// posts
@@ -71,5 +93,6 @@ func (app *application) run(mux *chi.Mux) error {
 		ReadTimeout:  time.Second * 10,
 		IdleTimeout:  time.Minute,
 	}
+	app.logger.Infow("server has started", "addr", app.config.addr, "env", app.config.env)
 	return srv.ListenAndServe()
 }

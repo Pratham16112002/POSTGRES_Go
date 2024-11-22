@@ -98,3 +98,24 @@ func getUserFromCtx(req *http.Request) *store.User {
 	user, _ := req.Context().Value(userCtx).(*store.User)
 	return user
 }
+
+func (app *application) userActivationHandler(res http.ResponseWriter, req *http.Request) {
+	token := chi.URLParam(req, "token")
+
+	ctx := req.Context()
+	err := app.store.Users.Activate(ctx, token)
+	if err != nil {
+		switch err {
+		case store.ErrNotFound:
+			app.notFoundError(res, req, err)
+		default:
+			app.internalServerError(res, req, err)
+		}
+		return
+	}
+	if err := app.jsonResponse(res, http.StatusNoContent, ""); err != nil {
+		app.internalServerError(res, req, err)
+		return
+	}
+
+}
