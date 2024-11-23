@@ -17,10 +17,10 @@ type RegisterUserPayload struct {
 	Password string `json:"password" validate:"required,min=3,max=88"`
 }
 
-type UserWithToken struct {
-	user  *store.User
-	token string
-}
+// type UserWithToken struct {
+// 	user  *store.User
+// 	token string
+// }
 
 func (app *application) userRegisterHandler(res http.ResponseWriter, req *http.Request) {
 	var payload RegisterUserPayload
@@ -63,11 +63,11 @@ func (app *application) userRegisterHandler(res http.ResponseWriter, req *http.R
 	}
 	// Sending email
 	isProdEnv := app.config.env == "production"
-	userWithToken := UserWithToken{
-		user:  user,
-		token: token,
-	}
-
+	// userWithToken := UserWithToken{
+	// 	user:  user,
+	// 	token: token,
+	// }
+	app.logger.Infow("token is : ", token)
 	activationURL := fmt.Sprintf("%s/confirm/%s", app.config.frontendURL, token)
 	vars := struct {
 		Username      string
@@ -77,13 +77,19 @@ func (app *application) userRegisterHandler(res http.ResponseWriter, req *http.R
 		ActivationURL: activationURL,
 	}
 
-	if err := app.mailer.Send(mailer.UserActivationTemplate, user.Username, user.Email, vars, !isProdEnv); err != nil {
-		app.logger.Errorw("error sending activation email", "error", err)
-
-		// rollback the user creation and invitation
-		if err := app.store.Users.Delete(ctx, user.ID); err != nil {
-			app.internalServerError(res, req, err)
-			return
+	email_status_code, err := app.mailer.Send(mailer.UserActivationTemplate, user.Username, user.Email, vars, !isProdEnv)
+	if err != nil {
+		if email_status_code != -1 {
+			if err := app.store.Users.Delete(ctx, user.ID); err != nil {
+				app.internalServerError(res, req, err)
+				return
+			}
 		}
 	}
+
+	if err := app.jsonResponse(res, http.StatusNoContent, ""); err != nil {
+		app.internalServerError(res, req, err)
+		return
+	}
+
 }

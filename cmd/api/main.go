@@ -25,13 +25,11 @@ func main() {
 		mail: mailConfig{
 			exp:       time.Minute * 10,
 			fromEmail: env.GetString("FROM_EMAIL", "blogspot@support.com"),
-			sendGrid: SendGridConfig{
-				apiKey: env.GetString("SENDGRID_API_KEY", ""),
-			},
+			apiKey:    env.GetString("EMAIL_API_KEY", "3f8f43d7-15da-490b-8a2c-71bc7fe7506f"),
 		},
 	}
 	// Mailer
-	mailer := mailer.NewSendgrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
+	mailer := mailer.NewMailer(cfg.mail.apiKey, cfg.mail.fromEmail)
 	// Logger
 	logger := zap.Must(zap.NewProduction()).Sugar()
 	defer logger.Sync()

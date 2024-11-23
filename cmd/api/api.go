@@ -36,11 +36,7 @@ type config struct {
 type mailConfig struct {
 	exp       time.Duration
 	fromEmail string
-	sendGrid  SendGridConfig
-}
-
-type SendGridConfig struct {
-	apiKey string
+	apiKey    string
 }
 
 func (app *application) mount() *chi.Mux {
