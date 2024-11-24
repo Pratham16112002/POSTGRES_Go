@@ -32,7 +32,6 @@ func (p *PasswordType) Set(password_txt string) error {
 		return err
 	}
 	return nil
-
 }
 
 type UserStore struct {
@@ -73,6 +72,25 @@ func (s *UserStore) CreateAndInvite(ctx context.Context, user *User, token strin
 		}
 		return nil
 	})
+}
+
+func (s *UserStore) deleteUser(ctx context.Context, tx *sql.Tx, userId int64) error {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+	query := `DELETE FROM users where user_id = $1`
+	sql_res, err := tx.ExecContext(ctx, query, userId)
+	if err != nil {
+		return err
+	}
+	rows_affected, err := sql_res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows_affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+
 }
 
 func (s *UserStore) createUserInvitation(ctx context.Context, tx *sql.Tx, token string, exp time.Duration, UserId int64) error {
@@ -172,4 +190,19 @@ func (s *UserStore) getUserFromInvitation(ctx context.Context, tx *sql.Tx, token
 	return user, nil
 }
 
-func (s *UserStore) Delete(ctx context.Context)
+func (s *UserStore) Delete(ctx context.Context, userId int64) error {
+
+	return withTx(s.db, ctx, func(tx *sql.Tx) error {
+		// deleting the user invitation
+		err := s.deleteUserInvitations(ctx, tx, userId)
+		if err != nil {
+			return err
+		}
+
+		err = s.deleteUser(ctx, tx, userId)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
