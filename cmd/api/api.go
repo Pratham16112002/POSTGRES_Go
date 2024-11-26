@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Blog/internal/auth"
 	"Blog/internal/mailer"
 	"Blog/internal/store"
 	"net/http"
@@ -16,6 +17,7 @@ type application struct {
 	store  store.Storage
 	logger *zap.SugaredLogger
 	mailer mailer.Client
+	auth   auth.JWTAuthenticator
 }
 
 type dbConfig struct {
@@ -31,6 +33,23 @@ type config struct {
 	env         string
 	frontendURL string
 	mail        mailConfig
+	auth        authConfig
+}
+
+type authConfig struct {
+	basic basicConfig
+	token tokenConfig
+}
+
+type tokenConfig struct {
+	secret string
+	exp    time.Duration
+	iss    string
+}
+
+type basicConfig struct {
+	user string
+	pass string
 }
 
 type mailConfig struct {
@@ -47,32 +66,36 @@ func (app *application) mount() *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Route("/v1", func(r chi.Router) {
-		r.Get("/health", app.healthCheckHandler)
+		r.With(app.BasicAuthMiddleware()).Get("/health", app.healthCheckHandler)
 		r.Route("/posts", func(r chi.Router) {
+			r.Use(app.AuthenTokenMiddleware())
 			r.Post("/", app.createPostHandler)
 			r.Route("/{postId}", func(r chi.Router) {
 				r.Use(app.postsContextMiddleware)
 				r.Get("/", app.getPostHanlder)
-				r.Delete("/", app.deletePostHandler)
-				r.Patch("/", app.updatePostHandler)
+				r.Delete("/", app.CheckPostOwnership("admin", app.deletePostHandler))
+				r.Patch("/", app.CheckPostOwnership("moderator", app.updatePostHandler))
 				r.Post("/comments", app.postCommentHandler)
 			})
 		})
 		r.Route("/users", func(r chi.Router) {
 			r.Put("/active/{token}", app.userActivationHandler)
 			r.Route("/{userId}", func(r chi.Router) {
+				r.Use(app.AuthenTokenMiddleware())
 				r.Use(app.usersContextMiddleware)
 				r.Get("/", app.getUserHandler)
 				r.Put("/follow", app.followUserHandler)
 				r.Put("/unfollow", app.unfollowUserHandler)
 			})
 			r.Group(func(r chi.Router) {
+				r.Use(app.AuthenTokenMiddleware())
 				r.Get("/feed", app.getUserFeedHandler)
 			})
 		})
 		// Public routes
 		r.Route("/authentication", func(r chi.Router) {
 			r.Post("/user", app.userRegisterHandler)
+			r.Post("/token", app.createTokenHandler)
 		})
 	})
 	// posts

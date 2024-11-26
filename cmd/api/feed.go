@@ -31,12 +31,8 @@ func (app *application) getUserFeedHandler(res http.ResponseWriter, req *http.Re
 		return
 	}
 	ctx := req.Context()
-	var payload UserFeedPayload
-	if err := readJSON(res, req, &payload); err != nil {
-		app.badRequestError(res, req, err)
-		return
-	}
-	feed, err := app.store.Posts.GetUserFeed(ctx, payload.UserId, fq)
+	user := getAuthUser(req)
+	feed, err := app.store.Posts.GetUserFeed(ctx, user.ID, fq)
 	fmt.Println(feed)
 	if err != nil {
 		switch err {

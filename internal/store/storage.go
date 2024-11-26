@@ -33,6 +33,7 @@ type Storage struct {
 		createUserInvitation(context.Context, *sql.Tx, string, time.Duration, int64) error
 		Activate(context.Context, string) error
 		Delete(context.Context, int64) error
+		GetUserByEmail(context.Context, string) (*User, error)
 	}
 	Comments interface {
 		Create(context.Context, *Comment) error
@@ -42,6 +43,9 @@ type Storage struct {
 		Follow(context.Context, int64, int64) error
 		Unfollow(context.Context, int64, int64) error
 	}
+	Roles interface {
+		GetRoleByName(context.Context, string) (*Role, error)
+	}
 }
 
 func NewPostgresStore(db *sql.DB) Storage {
@@ -50,6 +54,7 @@ func NewPostgresStore(db *sql.DB) Storage {
 		Users:     &UserStore{db},
 		Comments:  &CommentStore{db},
 		Followers: &FollowerStore{db},
+		Roles:     &RoleStore{db: db},
 	}
 }
 

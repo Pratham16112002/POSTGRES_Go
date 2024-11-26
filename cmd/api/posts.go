@@ -28,9 +28,9 @@ type DeletedPostPayload struct {
 	ID int64 `json:"content"`
 }
 
-type UpdatedPostPayload struct {
-	Title   *string `json:"title,omitempty" validate:"omitempty,max=100"`
-	Content *string `json:"content,omitempty" validate:"omitempty,max=1000"`
+type UpdatePostPayload struct {
+	Title   *string `json:"title" validate:"omitempty,max=100"`
+	Content *string `json:"content" validate:"omitempty,max=1000"`
 }
 
 func (app *application) getPostHanlder(res http.ResponseWriter, req *http.Request) {
@@ -50,22 +50,26 @@ func (app *application) getPostHanlder(res http.ResponseWriter, req *http.Reques
 
 func (app *application) updatePostHandler(res http.ResponseWriter, req *http.Request) {
 	post := getPostFromCtx(req)
-	var payload UpdatedPostPayload
+	var payload UpdatePostPayload
 	if err := readJSON(res, req, &payload); err != nil {
-		app.internalServerError(res, req, err)
+		app.badRequestError(res, req, err)
 		return
 	}
 	if err := validate.Struct(payload); err != nil {
 		app.badRequestError(res, req, err)
 		return
 	}
-	if payload.Title != nil {
-		post.Title = *payload.Title
-	}
+
 	if payload.Content != nil {
 		post.Content = *payload.Content
 	}
-	err := app.store.Posts.Update(req.Context(), post)
+	if payload.Title != nil {
+		post.Title = *payload.Title
+	}
+
+	ctx := req.Context()
+
+	err := app.store.Posts.Update(ctx, post)
 	if err != nil {
 		switch {
 		case errors.Is(err, store.ErrNotFound):
@@ -82,14 +86,12 @@ func (app *application) updatePostHandler(res http.ResponseWriter, req *http.Req
 }
 
 func (app *application) deletePostHandler(res http.ResponseWriter, req *http.Request) {
-	postId, err := strconv.ParseInt(chi.URLParam(req, "postId"), 10, 64)
-	if err != nil {
-		app.badRequestError(res, req, err)
-		return
-	}
+
+	post := getPostFromCtx(req)
+
 	ctx := req.Context()
 
-	err = app.store.Posts.Delete(ctx, postId)
+	err := app.store.Posts.Delete(ctx, post.ID)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -114,9 +116,9 @@ func (app *application) createPostHandler(res http.ResponseWriter, req *http.Req
 		app.badRequestError(res, req, err)
 		return
 	}
-	userID := 2
+	user := getUserFromContext(req)
 	post := &store.Post{
-		UserId:  int64(userID),
+		UserId:  user.ID,
 		Title:   payload.Title,
 		Content: payload.Content,
 		Tags:    payload.Tags,
@@ -144,9 +146,10 @@ func (app *application) postCommentHandler(res http.ResponseWriter, req *http.Re
 		app.badRequestError(res, req, err)
 		return
 	}
+	user := getUserFromContext(req)
 	var comment store.Comment
 	comment.Content = payload.Content
-	comment.UserID = 1
+	comment.UserID = user.ID
 	comment.PostID = post.ID
 	ctx := req.Context()
 	err := app.store.Comments.Create(ctx, &comment)

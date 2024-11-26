@@ -12,30 +12,21 @@ import (
 
 type userKey string
 
-const userCtx userKey = "user"
+const ctxUser userKey = "user"
 
 func (app *application) getUserHandler(res http.ResponseWriter, req *http.Request) {
-	user := getUserFromCtx(req)
+	user := getUserFromContext(req)
 	if err := app.jsonResponse(res, http.StatusFound, user); err != nil {
 		app.internalServerError(res, req, err)
 		return
 	}
 }
 
-type FollowUser struct {
-	UserId int64 `json:"user_id"`
-}
-
 func (app *application) followUserHandler(res http.ResponseWriter, req *http.Request) {
-	// : TODO get the followee from authentication context
-	follower := getUserFromCtx(req)
-	var paylaod FollowUser
-	if err := readJSON(res, req, &paylaod); err != nil {
-		app.badRequestError(res, req, err)
-		return
-	}
+	follower := getAuthUser(req)
+	followee := getUserFromContext(req)
 	ctx := req.Context()
-	err := app.store.Followers.Follow(ctx, paylaod.UserId, follower.ID)
+	err := app.store.Followers.Follow(ctx, followee.ID, follower.ID)
 	if err != nil {
 		switch err {
 		case store.ErrConflict:
@@ -51,15 +42,10 @@ func (app *application) followUserHandler(res http.ResponseWriter, req *http.Req
 	}
 }
 func (app *application) unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
-	// : TODO get the followee from authentication context
-	follower := getUserFromCtx(req)
-	var paylaod FollowUser
-	if err := readJSON(res, req, &paylaod); err != nil {
-		app.badRequestError(res, req, err)
-		return
-	}
+	follower := getUserFromContext(req)
+	followee := getUserFromContext(req)
 	ctx := req.Context()
-	err := app.store.Followers.Unfollow(ctx, paylaod.UserId, follower.ID)
+	err := app.store.Followers.Unfollow(ctx, followee.ID, follower.ID)
 	if err != nil {
 		app.internalServerError(res, req, err)
 		return
@@ -89,13 +75,13 @@ func (app *application) usersContextMiddleware(next http.Handler) http.Handler {
 			}
 			return
 		}
-		ctx = context.WithValue(ctx, userCtx, user)
+		ctx = context.WithValue(ctx, ctxUser, user)
 		next.ServeHTTP(res, req.WithContext(ctx))
 	})
 }
 
-func getUserFromCtx(req *http.Request) *store.User {
-	user, _ := req.Context().Value(userCtx).(*store.User)
+func getAuthUser(req *http.Request) *store.User {
+	user, _ := req.Context().Value(authUser).(*store.User)
 	return user
 }
 
@@ -118,4 +104,8 @@ func (app *application) userActivationHandler(res http.ResponseWriter, req *http
 		return
 	}
 
+}
+func getUserFromContext(req *http.Request) *store.User {
+	user, _ := req.Context().Value(ctxUser).(*store.User)
+	return user
 }
