@@ -4,11 +4,14 @@ import (
 	"Blog/internal/auth"
 	"Blog/internal/mailer"
 	"Blog/internal/store"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/swaggo/swag/example/override/docs"
 	"go.uber.org/zap"
 )
 
@@ -67,6 +70,8 @@ func (app *application) mount() *chi.Mux {
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Route("/v1", func(r chi.Router) {
 		r.With(app.BasicAuthMiddleware()).Get("/health", app.healthCheckHandler)
+		docsURL := fmt.Sprintf("%s/swagger/doc.json", app.config.addr)
+		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsURL)))
 		r.Route("/posts", func(r chi.Router) {
 			r.Use(app.AuthenTokenMiddleware())
 			r.Post("/", app.createPostHandler)
@@ -105,6 +110,9 @@ func (app *application) mount() *chi.Mux {
 }
 
 func (app *application) run(mux *chi.Mux) error {
+
+	docs.SwaggerInfo.Version = version
+
 	srv := http.Server{
 		Addr:         app.config.addr,
 		Handler:      mux,
