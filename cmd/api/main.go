@@ -46,7 +46,7 @@ func main() {
 		frontendURL: env.GetString("FRONTEND_URL", "http://localhost:3001/"),
 		mail: mailConfig{
 			exp:       time.Minute * 10,
-			fromEmail: env.GetString("FROM_EMAIL", "pratham.209302249@muj.manipal.edu"),
+			fromEmail: env.GetString("FROM_EMAIL", "bloggerspot@support.com"),
 			apiKey:    env.GetString("EMAIL_API_KEY", "3f8f43d7-15da-490b-8a2c-71bc7fe7506f"),
 		},
 		auth: authConfig{
@@ -64,7 +64,7 @@ func main() {
 	// JWT
 	jwtAuth := auth.NewJWT(cfg.auth.token.secret, cfg.auth.token.iss, cfg.auth.token.iss)
 	// Mailer
-	mailer := mailer.NewMailer(cfg.mail.apiKey, cfg.mail.fromEmail)
+	mailer := mailer.NewResend(cfg.mail.apiKey, cfg.mail.fromEmail)
 	// Logger
 	logger := zap.Must(zap.NewProduction()).Sugar()
 	defer logger.Sync()

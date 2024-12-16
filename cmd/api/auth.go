@@ -67,7 +67,6 @@ func (app *application) userRegisterHandler(res http.ResponseWriter, req *http.R
 		return
 	}
 	// Sending email
-	isProdEnv := app.config.env == "production"
 	// userWithToken := UserWithToken{
 	// 	user:  user,
 	// 	token: token,
@@ -80,8 +79,9 @@ func (app *application) userRegisterHandler(res http.ResponseWriter, req *http.R
 		Username:      user.Username,
 		ActivationURL: activationURL,
 	}
-	email_status_code, err := app.mailer.Send(mailer.UserActivationTemplate, user.Username, user.Email, vars, !isProdEnv)
-	if err != nil || email_status_code == -1 {
+	err = app.mailer.Send(mailer.UserActivationTemplate, user.Username, user.Email, vars)
+	if err != nil {
+		app.logger.Errorw("error sending welcome email", "error", err)
 		if err := app.store.Users.Delete(ctx, user.ID); err != nil {
 			app.internalServerError(res, req, err)
 			return

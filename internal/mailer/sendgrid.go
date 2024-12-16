@@ -2,74 +2,58 @@ package mailer
 
 import (
 	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
+	"log"
 	"text/template"
+	"time"
+
+	"github.com/resend/resend-go/v2"
 )
 
-type NewMailerType struct {
+type ResendGridMailer struct {
 	fromEmail string
 	apiKey    string
+	client    *resend.Client
 }
 
-type MailPayload struct {
-	From          string `json:"From" validate:"email"`
-	To            string `json:"To" validate:"email"`
-	Subject       string `json:"Subject" validate:"max=50"`
-	TextBody      string `json:"Textbody"`
-	HtmlBody      string `json:"HtmlBody"`
-	MessageStream string `json:"MessageStream"`
-}
-
-func NewMailer(apiKey, fromEmail string) *NewMailerType {
-	return &NewMailerType{
+func NewResend(apikey, fromEmail string) *ResendGridMailer {
+	client := resend.NewClient(apikey)
+	return &ResendGridMailer{
+		apiKey:    apikey,
 		fromEmail: fromEmail,
-		apiKey:    apiKey,
+		client:    client,
 	}
 }
 
-func (m *NewMailerType) Send(templateFile, username, email string, data any, isSandbox bool) (int64, error) {
-	var payload MailPayload
-	payload.From = m.fromEmail
-	payload.To = email
-	payload.TextBody = fmt.Sprintf("Hi, %s", username)
-	payload.MessageStream = "outbound"
-	tmpl, err := template.ParseFS(FS, "templates/"+templateFile)
-	if err != nil {
-		return -1, err
-	}
-	// template parsing and building
-	subject := new(bytes.Buffer)
+func (m *ResendGridMailer) Send(templateFile, username, email string, data any) error {
 
-	tmpl.ExecuteTemplate(subject, "subject", data)
+	templ, err := template.ParseFS(FS, "templates/"+templateFile)
+	if err != nil {
+		return err
+	}
 
 	body := new(bytes.Buffer)
 
-	tmpl.ExecuteTemplate(body, "body", data)
+	err = templ.ExecuteTemplate(body, "body", data)
 
-	payload.Subject = subject.String()
-	payload.HtmlBody = body.String()
-
-	var data_payload_writer bytes.Buffer
-	if err := json.NewEncoder(&data_payload_writer).Encode(&payload); err != nil {
-		return -1, err
+	params := &resend.SendEmailRequest{
+		To:      []string{email},
+		From:    m.fromEmail,
+		Subject: "Activation Code",
+		Html:    body.String(),
 	}
 
-	client := &http.Client{}
-	ext_req, err := http.NewRequest(http.MethodPost, "https://api.postmarkapp.com/email", &data_payload_writer)
-	if err != nil {
-		return -1, err
+	for i := 0; i < MaxRetries; i++ {
+		sent, err := m.client.Emails.Send(params)
+		if err != nil {
+			log.Printf("Failed to send email to %v, attempt %d of %d\n", email, i+1, MaxRetries)
+			log.Printf(err.Error())
+			time.Sleep(time.Second * time.Duration(i+1))
+			continue
+		}
+		log.Printf("Email sent to %v  succcessfully with %v\n", email, sent.Id)
+		return nil
 	}
-	ext_req.Header.Add("Accept", "application/json")
-	ext_req.Header.Add("Content-Type", "application/json")
-	ext_req.Header.Add("X-Postmark-Server-Token", m.apiKey)
 
-	res, err := client.Do(ext_req)
-	if err != nil || res.StatusCode != http.StatusOK {
-		return http.StatusInternalServerError, errors.New("failed to send invite, server error")
-	}
-	defer res.Body.Close()
-	return http.StatusOK, nil
+	return fmt.Errorf("Failed to sent email after %d attempts\n", MaxRetries)
 }
