@@ -94,7 +94,7 @@ func (app *application) mount() *chi.Mux {
 			})
 		})
 		r.Route("/users", func(r chi.Router) {
-			r.Put("/active/{token}", app.userActivationHandler)
+			r.Put("/activate/{token}", app.userActivationHandler)
 			r.Route("/{userId}", func(r chi.Router) {
 				r.Use(app.AuthenTokenMiddleware())
 				r.Use(app.usersContextMiddleware)

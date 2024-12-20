@@ -22,6 +22,7 @@ var (
 )
 
 func (app *application) BasicAuthMiddleware() func(http.Handler) http.Handler {
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			// read the auth header
@@ -36,6 +37,7 @@ func (app *application) BasicAuthMiddleware() func(http.Handler) http.Handler {
 				app.basicAuthorizationError(res, req, errors.New("auth token not found"))
 				return
 			}
+			app.logger.Infow("msg", authHeader_parts)
 			decoded, err := base64.StdEncoding.DecodeString(authHeader_parts[1])
 			if err != nil {
 				app.basicAuthorizationError(res, req, err)

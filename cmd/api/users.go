@@ -87,7 +87,6 @@ func getAuthUser(req *http.Request) *store.User {
 
 func (app *application) userActivationHandler(res http.ResponseWriter, req *http.Request) {
 	token := chi.URLParam(req, "token")
-
 	ctx := req.Context()
 	err := app.store.Users.Activate(ctx, token)
 	if err != nil {
