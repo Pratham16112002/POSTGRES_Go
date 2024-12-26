@@ -115,7 +115,7 @@ func (app *application) createTokenHandler(res http.ResponseWriter, req *http.Re
 	if err != nil {
 		switch err {
 		case store.ErrNotFound:
-			app.authorizationError(res, req, err)
+			app.notFoundError(res, req, err)
 		default:
 			app.internalServerError(res, req, err)
 		}

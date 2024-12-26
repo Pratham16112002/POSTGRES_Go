@@ -23,8 +23,8 @@ func (app *application) getUserHandler(res http.ResponseWriter, req *http.Reques
 }
 
 func (app *application) followUserHandler(res http.ResponseWriter, req *http.Request) {
-	follower := getAuthUser(req)
-	followee := getUserFromContext(req)
+	followee := getAuthUser(req)
+	follower := getUserFromContext(req)
 	ctx := req.Context()
 	err := app.store.Followers.Follow(ctx, followee.ID, follower.ID)
 	if err != nil {
@@ -105,6 +105,6 @@ func (app *application) userActivationHandler(res http.ResponseWriter, req *http
 
 }
 func getUserFromContext(req *http.Request) *store.User {
-	user, _ := req.Context().Value(ctxUser).(*store.User)
+	user, _ := req.Context().Value(authUser).(*store.User)
 	return user
 }

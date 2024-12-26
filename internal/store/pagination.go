@@ -59,9 +59,10 @@ func (pq PaginatedFeedQuery) Parse(req *http.Request) (PaginatedFeedQuery, error
 }
 
 func ParseTime(str_time string) string {
-	parsed_time, err := time.Parse(time.RFC3339, str_time)
+	t, err := time.Parse(time.DateTime, str_time)
 	if err != nil {
 		return ""
 	}
-	return parsed_time.Format(time.RFC3339)
+
+	return t.Format(time.DateTime)
 }

@@ -4,7 +4,6 @@ import (
 	"Blog/internal/store"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 type UserFeedPayload struct {
@@ -14,12 +13,11 @@ type UserFeedPayload struct {
 func (app *application) getUserFeedHandler(res http.ResponseWriter, req *http.Request) {
 	// pagination , serach , filters
 	fq := store.PaginatedFeedQuery{
-		Limit:  10,
-		Offset: 20,
+		Limit:  20,
+		Offset: 0,
 		Sort:   "desc",
-		Tags:   make([]string, 0),
-		Since:  store.ParseTime("1990-11-21T11:26:57+05:30"),
-		Until:  time.Now().Format(time.RFC3339),
+		Tags:   []string{},
+		Search: "",
 	}
 	fq, err := fq.Parse(req)
 	if err != nil {

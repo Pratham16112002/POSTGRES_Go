@@ -57,7 +57,7 @@ func main() {
 			token: tokenConfig{
 				secret: env.GetString("JWT_SECRET", "12345"),
 				exp:    time.Hour * 24 * 3,
-				iss:    env.GetString("JWT_ISS", "jwthost"),
+				iss:    env.GetString("JWT_ISS", "bloggerspot"),
 			},
 		},
 	}

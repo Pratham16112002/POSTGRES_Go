@@ -79,19 +79,15 @@ WHERE
 	)
 	AND
 	( p.tags @> $3 OR $3 = '{}' )
-	AND
-	p.created_at > TO_TIMESTAMP($4,'YYYY-MM-DD"T"HH24:MI:SSOF')
-	AND
-	p.created_at < TO_TIMESTAMP($5,'YYYY-MM-DD"T"HH24:MI:SSOF')
 GROUP BY
-	p.id,u.username
+	p.id, u.username
 ORDER BY
-	p.created_at ` + pageQuery.Sort + ` LIMIT $6 OFFSET $7;`
+	p.created_at ` + pageQuery.Sort + ` LIMIT $4 OFFSET $5;`
 
 	rows, err := s.db.QueryContext(ctx, query, userId,
 		pageQuery.Search, pq.Array(pageQuery.Tags),
-		pageQuery.Since, pageQuery.Until,
-		pageQuery.Limit, pageQuery.Offset)
+		pageQuery.Limit,
+		pageQuery.Offset)
 	if err != nil {
 		return nil, err
 	}
