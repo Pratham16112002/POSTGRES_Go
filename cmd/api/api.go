@@ -4,8 +4,13 @@ import (
 	"Blog/internal/auth"
 	"Blog/internal/mailer"
 	"Blog/internal/store"
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -130,6 +135,25 @@ func (app *application) run(mux *chi.Mux) error {
 		ReadTimeout:  time.Second * 10,
 		IdleTimeout:  time.Minute,
 	}
+	shutdown := make(chan error)
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		s := <-quit
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		app.logger.Infow("signal caught", "sginal", s.String())
+		shutdown <- srv.Shutdown(ctx)
+	}()
 	app.logger.Infow("server has started", "addr", app.config.addr, "env", app.config.env)
-	return srv.ListenAndServe()
+	err := srv.ListenAndServe()
+	if !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	err = <-shutdown
+	if err != nil {
+		return err
+	}
+	app.logger.Infow("server has stopped", "addr", app.config.addr)
+	return nil
 }

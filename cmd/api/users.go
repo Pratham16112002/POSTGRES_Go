@@ -105,6 +105,6 @@ func (app *application) userActivationHandler(res http.ResponseWriter, req *http
 
 }
 func getUserFromContext(req *http.Request) *store.User {
-	user, _ := req.Context().Value(authUser).(*store.User)
+	user, _ := req.Context().Value(ctxUser).(*store.User)
 	return user
 }

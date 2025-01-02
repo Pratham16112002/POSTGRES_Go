@@ -116,7 +116,7 @@ func (app *application) createPostHandler(res http.ResponseWriter, req *http.Req
 		app.badRequestError(res, req, err)
 		return
 	}
-	user := getUserFromContext(req)
+	user := getAuthUser(req)
 	post := &store.Post{
 		UserId:  user.ID,
 		Title:   payload.Title,
@@ -146,7 +146,7 @@ func (app *application) postCommentHandler(res http.ResponseWriter, req *http.Re
 		app.badRequestError(res, req, err)
 		return
 	}
-	user := getUserFromContext(req)
+	user := getAuthUser(req)
 	var comment store.Comment
 	comment.Content = payload.Content
 	comment.UserID = user.ID

@@ -6,6 +6,7 @@ import (
 	"Blog/internal/env"
 	"Blog/internal/mailer"
 	"Blog/internal/store"
+	"fmt"
 	"time" // http-swagger middleware
 
 	"go.uber.org/zap"
@@ -33,7 +34,7 @@ const version = "1.0.0"
 // @name 			Authorization
 // @description
 func main() {
-
+	fmt.Println(time.Now())
 	cfg := config{
 		addr: env.GetString("ADDR", ":3002"),
 		db: dbConfig{
@@ -56,7 +57,7 @@ func main() {
 			},
 			token: tokenConfig{
 				secret: env.GetString("JWT_SECRET", "12345"),
-				exp:    time.Hour * 24 * 3,
+				exp:    time.Hour * 10,
 				iss:    env.GetString("JWT_ISS", "bloggerspot"),
 			},
 		},
