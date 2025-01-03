@@ -28,9 +28,6 @@ func NewResend(apikey, fromEmail string) *ResendGridMailer {
 func (m *ResendGridMailer) Send(templateFile, username, email string, data any) error {
 
 	templ, err := template.ParseFS(FS, "templates/"+templateFile)
-	if err != nil {
-		return err
-	}
 
 	body := new(bytes.Buffer)
 
@@ -41,6 +38,9 @@ func (m *ResendGridMailer) Send(templateFile, username, email string, data any) 
 		From:    m.fromEmail,
 		Subject: "Activation Code",
 		Html:    body.String(),
+	}
+	if err != nil {
+		return err
 	}
 
 	for i := 0; i < MaxRetries; i++ {
@@ -55,5 +55,5 @@ func (m *ResendGridMailer) Send(templateFile, username, email string, data any) 
 		return nil
 	}
 
-	return fmt.Errorf("failed to sent email after %d attempts\n", MaxRetries)
+	return fmt.Errorf("failed to sent email")
 }
