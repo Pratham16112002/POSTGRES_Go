@@ -2,7 +2,9 @@ package main
 
 import (
 	"Blog/internal/auth"
+	"Blog/internal/env"
 	"Blog/internal/mailer"
+	ratelimiter "Blog/internal/rateLimiter"
 	"Blog/internal/store"
 	"context"
 	"errors"
@@ -22,11 +24,12 @@ import (
 )
 
 type application struct {
-	config config
-	store  store.Storage
-	logger *zap.SugaredLogger
-	mailer mailer.Client
-	auth   auth.JWTAuthenticator
+	config      config
+	store       store.Storage
+	logger      *zap.SugaredLogger
+	mailer      mailer.Client
+	auth        auth.JWTAuthenticator
+	rateLimiter ratelimiter.Limiter
 }
 
 type dbConfig struct {
@@ -43,6 +46,7 @@ type config struct {
 	frontendURL string
 	mail        mailConfig
 	auth        authConfig
+	rateLimiter ratelimiter.Config
 }
 
 type authConfig struct {
@@ -69,22 +73,26 @@ type mailConfig struct {
 
 func (app *application) mount() *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: false,
-		MaxAge:           300,
-	}))
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{env.GetString("LOCAL_FRONTEND_URL", "http://localhost:3000")},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+	if app.config.rateLimiter.Enabled {
+		r.Use(app.RateLimiterMiddleware)
+	}
 	r.Route("/v1", func(r chi.Router) {
-		r.With(app.BasicAuthMiddleware()).Get("/health", app.healthCheckHandler)
+		r.Get("/health", app.healthCheckHandler)
+		r.With(app.BasicAuthMiddleware())
 		docsURL := fmt.Sprintf("%s/swagger/doc.json", app.config.addr)
 		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsURL)))
 		r.Route("/posts", func(r chi.Router) {

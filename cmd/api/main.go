@@ -5,6 +5,7 @@ import (
 	"Blog/internal/db"
 	"Blog/internal/env"
 	"Blog/internal/mailer"
+	ratelimiter "Blog/internal/rateLimiter"
 	"Blog/internal/store"
 	"fmt"
 	"time" // http-swagger middleware
@@ -61,6 +62,11 @@ func main() {
 				iss:    env.GetString("JWT_ISS", "bloggerspot"),
 			},
 		},
+		rateLimiter: ratelimiter.Config{
+			RequestPerFrame: env.GetInt("RATE_LIMITER_REQUEST_PER_FRAME", 100),
+			TimeFrame:       time.Second * 5,
+			Enabled:         env.GetBool("RATE_LIMITER_ENABLED", true),
+		},
 	}
 	// JWT
 	jwtAuth := auth.NewJWT(cfg.auth.token.secret, cfg.auth.token.iss, cfg.auth.token.iss)
@@ -70,6 +76,8 @@ func main() {
 	// Logger
 	logger := zap.Must(zap.NewProduction()).Sugar()
 	defer logger.Sync()
+	// Rate limiter
+	rateLimiter := ratelimiter.NewFixedWindowRateLimiter(cfg.rateLimiter.RequestPerFrame, cfg.rateLimiter.TimeFrame)
 	// Database
 	db, err := db.NewDB(cfg.db.addr, cfg.db.maxOpenConns, cfg.db.maxIdleConns, cfg.db.maxIdleTime, logger)
 	if err != nil {
@@ -78,11 +86,12 @@ func main() {
 	defer db.Close()
 	store := store.NewPostgresStore(db)
 	app := &application{
-		config: cfg,
-		store:  store,
-		logger: logger,
-		mailer: mailer,
-		auth:   *jwtAuth,
+		config:      cfg,
+		store:       store,
+		logger:      logger,
+		mailer:      mailer,
+		auth:        *jwtAuth,
+		rateLimiter: rateLimiter,
 	}
 	logger.Info("Server is starting on %v\n", cfg.addr)
 	mux := app.mount()

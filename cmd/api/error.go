@@ -42,3 +42,9 @@ func (app *application) authenticationError(res http.ResponseWriter, req *http.R
 	app.logger.Warnw("authentication failed", err, "path", req.URL.Path, "method", req.Method, "message", err.Error())
 	writeJSONError(res, http.StatusInternalServerError, "oops, redo authentication")
 }
+
+func (app *application) rateLimitExceededResponse(res http.ResponseWriter, req *http.Request, retryAfter string) {
+	app.logger.Warnw("rate limit exceeded", "path", req.URL.Path, "method", req.Method)
+	res.Header().Set("Retry-After", retryAfter)
+	writeJSONError(res, http.StatusTooManyRequests, "rate limit exceeded please try after : "+retryAfter)
+}

@@ -139,3 +139,15 @@ func (app *application) checkRolePrecedence(ctx context.Context, user *store.Use
 	}
 	return true, nil
 }
+
+func (app *application) RateLimiterMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		if app.config.rateLimiter.Enabled {
+			if allow, retryAfter := app.rateLimiter.Allow(req.RemoteAddr); !allow {
+				app.rateLimitExceededResponse(res, req, retryAfter.String())
+				return
+			}
+		}
+		next.ServeHTTP(res, req)
+	})
+}

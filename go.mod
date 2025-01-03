@@ -36,4 +36,5 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
+	k8s.io/utils v0.0.0-20241210054802-24370beab758
 )
