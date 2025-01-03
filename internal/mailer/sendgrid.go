@@ -28,6 +28,9 @@ func NewResend(apikey, fromEmail string) *ResendGridMailer {
 func (m *ResendGridMailer) Send(templateFile, username, email string, data any) error {
 
 	templ, err := template.ParseFS(FS, "templates/"+templateFile)
+	if err != nil {
+		return err
+	}
 
 	body := new(bytes.Buffer)
 
