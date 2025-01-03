@@ -3,11 +3,8 @@ package main
 import (
 	ratelimiter "Blog/internal/rateLimiter"
 	"Blog/internal/store"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
@@ -25,13 +22,13 @@ func newTestApplication(t *testing.T, cfg config) *application {
 	}
 }
 
-func executeRequest(req *http.Request, mux *chi.Mux) {
-	rr := httptest.NewRecorder()
-	mux.ServeHTTP(rr, req)
-}
+// func executeRequest(req *http.Request, mux *chi.Mux) {
+// 	rr := httptest.NewRecorder()
+// 	mux.ServeHTTP(rr, req)
+// }
 
-func checkResponse(t *testing.T, expected, actual int) {
-	if expected != actual {
-		t.Errorf("Expected response code %d, Got %d", expected, actual)
-	}
-}
+// func checkResponse(t *testing.T, expected, actual int) {
+// 	if expected != actual {
+// 		t.Errorf("Expected response code %d, Got %d", expected, actual)
+// 	}
+// }
