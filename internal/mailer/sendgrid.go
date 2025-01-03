@@ -47,7 +47,7 @@ func (m *ResendGridMailer) Send(templateFile, username, email string, data any) 
 		sent, err := m.client.Emails.Send(params)
 		if err != nil {
 			log.Printf("Failed to send email to %v, attempt %d of %d\n", email, i+1, MaxRetries)
-			log.Printf(err.Error())
+			log.Printf("%s", err.Error())
 			time.Sleep(time.Second * time.Duration(i+1))
 			continue
 		}
@@ -55,5 +55,5 @@ func (m *ResendGridMailer) Send(templateFile, username, email string, data any) 
 		return nil
 	}
 
-	return fmt.Errorf("Failed to sent email after %d attempts\n", MaxRetries)
+	return fmt.Errorf("failed to sent email after %d attempts\n", MaxRetries)
 }
