@@ -71,7 +71,7 @@ func (app *application) userRegisterHandler(res http.ResponseWriter, req *http.R
 	// 	user:  user,
 	// 	token: token,
 	// }
-	activationURL := fmt.Sprintf("%s/confirm/%s", app.config.frontendURL, token)
+	activationURL := fmt.Sprintf("%sconfirm/%s", app.config.frontendURL, token)
 	vars := struct {
 		Username      string
 		ActivationURL string
