@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS posts (
     id bigserial PRIMARY KEY,
     username text NOT NULL,
     user_id bigint NOT NULL,
