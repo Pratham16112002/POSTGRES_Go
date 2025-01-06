@@ -6,13 +6,8 @@ import (
 	"net/http"
 )
 
-type UserFeedPayload struct {
-	UserId int64 `json:"user_id"`
-}
-
-func (app *application) getUserFeedHandler(res http.ResponseWriter, req *http.Request) {
-	// pagination , serach , filters
-	fq := &paginate.PostPaginateQuery{}
+func (app *application) getUserSearchFriend(res http.ResponseWriter, req *http.Request) {
+	fq := &paginate.FriendPaginateQuery{}
 	err := fq.Parse(req)
 	if err != nil {
 		app.badRequestError(res, req, err)
@@ -24,7 +19,7 @@ func (app *application) getUserFeedHandler(res http.ResponseWriter, req *http.Re
 	}
 	ctx := req.Context()
 	user := getAuthUser(req)
-	feed, err := app.store.Posts.GetUserFeed(ctx, user.ID, fq)
+	list, err := app.store.Users.SearchFriends(ctx, user.ID, fq)
 	if err != nil {
 		switch err {
 		case store.ErrNotFound:
@@ -35,8 +30,9 @@ func (app *application) getUserFeedHandler(res http.ResponseWriter, req *http.Re
 			return
 		}
 	}
-	if err := app.jsonResponse(res, http.StatusOK, feed); err != nil {
+	if err := app.jsonResponse(res, http.StatusOK, list); err != nil {
 		app.internalServerError(res, req, err)
 		return
 	}
+
 }

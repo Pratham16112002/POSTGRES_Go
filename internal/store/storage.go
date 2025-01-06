@@ -1,6 +1,7 @@
 package store
 
 import (
+	"Blog/internal/store/paginate"
 	"context"
 	"database/sql"
 	"errors"
@@ -24,7 +25,7 @@ type Storage struct {
 		GetById(context.Context, int64) (*Post, error)
 		Delete(context.Context, int64) error
 		Update(context.Context, *Post) error
-		GetUserFeed(context.Context, int64, PaginatedFeedQuery) ([]PostWithMetaData, error)
+		GetUserFeed(context.Context, int64, *paginate.PostPaginateQuery) ([]PostWithMetaData, error)
 	}
 	Users interface {
 		Create(context.Context, *sql.Tx, *User) error
@@ -34,6 +35,7 @@ type Storage struct {
 		Activate(context.Context, string) error
 		Delete(context.Context, int64) error
 		GetUserByEmail(context.Context, string) (*User, error)
+		SearchFriends(context.Context, int64, *paginate.FriendPaginateQuery) ([]User, error)
 	}
 	Comments interface {
 		Create(context.Context, *Comment) error

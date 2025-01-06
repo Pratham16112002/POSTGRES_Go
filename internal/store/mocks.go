@@ -1,6 +1,7 @@
 package store
 
 import (
+	"Blog/internal/store/paginate"
 	"context"
 	"database/sql"
 	"time"
@@ -40,4 +41,8 @@ func (m *MockUserStore) Delete(ctx context.Context, id int64) error {
 
 func (m *MockUserStore) createUserInvitation(ctx context.Context, tx *sql.Tx, token string, exp time.Duration, userID int64) error {
 	return nil
+}
+
+func (m *MockUserStore) SearchFriends(ctx context.Context, userId int64, friendQuery *paginate.FriendPaginateQuery) ([]User, error) {
+	return nil, nil
 }
