@@ -22,8 +22,11 @@ func (pq *PostPaginateQuery) Parse(req *http.Request) error {
 	if sort := qs.Get("sort"); sort != "" {
 		pq.Sort = sort
 	}
-	if tags := qs.Get("tags"); tags != "" {
+	tags := qs.Get("tags")
+	if tags != "" {
 		pq.Tags = strings.Split(tags, ",")
+	} else {
+		pq.Tags = []string{}
 	}
 	return nil
 }
