@@ -118,6 +118,7 @@ func (app *application) mount() *chi.Mux {
 			r.Group(func(r chi.Router) {
 				r.Use(app.AuthenTokenMiddleware())
 				r.Get("/feed", app.getUserFeedHandler)
+				r.Get("/friends", app.getUserSearchFriend)
 			})
 		})
 		// Public routes

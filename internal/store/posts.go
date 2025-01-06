@@ -1,6 +1,7 @@
 package store
 
 import (
+	"Blog/internal/store/paginate"
 	"context"
 	"database/sql"
 	"errors"
@@ -49,7 +50,7 @@ func (s *PostStore) GetById(ctx context.Context, id int64) (*Post, error) {
 	return &post, nil
 }
 
-func (s *PostStore) GetUserFeed(ctx context.Context, userId int64, pageQuery PaginatedFeedQuery) ([]PostWithMetaData, error) {
+func (s *PostStore) GetUserFeed(ctx context.Context, userId int64, pageQuery *paginate.PostPaginateQuery) ([]PostWithMetaData, error) {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 	query := `SELECT
@@ -67,9 +68,11 @@ FROM
 	posts p
 	LEFT JOIN comments c ON p.id = c.post_id
 	LEFT JOIN users u ON p.user_id = u.id
-	LEFT JOIN followers f ON f.follower_id = p.user_id
+	 JOIN followers f ON f.follower_id = p.user_id
+	 OR p.user_id = $1
 WHERE
-	(f.user_id = $1 
+	(
+	f.user_id = $1 
 	OR p.user_id = $1
 	)
 	AND

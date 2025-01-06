@@ -1,6 +1,7 @@
 package store
 
 import (
+	"Blog/internal/store/paginate"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -237,4 +238,49 @@ func (s *UserStore) Delete(ctx context.Context, userId int64) error {
 		}
 		return nil
 	})
+}
+
+func (s *UserStore) SearchFriends(ctx context.Context, userId int64, friendQuery *paginate.FriendPaginateQuery) ([]User, error) {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+	query := `SELECT 
+    u.id, 
+    u.username,
+    u.email,
+    u.created_at
+FROM 
+    users AS u 
+JOIN 
+    roles AS r 
+ON 
+    u.role_id = r.id 
+WHERE 
+    r.name = $1 
+AND 
+    u.id NOT IN (
+        SELECT 
+            follower_id 
+        FROM 
+            followers 
+        WHERE 
+            user_id = $2 
+    )
+AND
+	u.id != $2
+LIMIT $3 OFFSET $4;
+`
+	rows, err := s.db.QueryContext(ctx, query, friendQuery.Role, userId, friendQuery.Limit, friendQuery.Offset)
+	if err != nil {
+		return nil, err
+	}
+	list := []User{}
+	for rows.Next() {
+		var u User
+		err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, u)
+	}
+	return list, nil
 }
