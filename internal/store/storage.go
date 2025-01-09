@@ -35,7 +35,7 @@ type Storage struct {
 		Activate(context.Context, string) error
 		Delete(context.Context, int64) error
 		GetUserByEmail(context.Context, string) (*User, error)
-		SearchFriends(context.Context, int64, *paginate.FriendPaginateQuery) ([]User, error)
+		SearchFriends(context.Context, int64, *paginate.FriendPaginateQuery) ([]UserWithMetaData, error)
 	}
 	Comments interface {
 		Create(context.Context, *Comment) error
