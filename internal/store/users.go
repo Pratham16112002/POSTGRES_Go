@@ -22,6 +22,11 @@ type User struct {
 	Role      Role         `json:"role"`
 }
 
+type UserWithMetaData struct {
+	User
+	Follower bool `json:"follower"`
+}
+
 type PasswordType struct {
 	text *string
 	hash []byte
@@ -240,43 +245,41 @@ func (s *UserStore) Delete(ctx context.Context, userId int64) error {
 	})
 }
 
-func (s *UserStore) SearchFriends(ctx context.Context, userId int64, friendQuery *paginate.FriendPaginateQuery) ([]User, error) {
+func (s *UserStore) SearchFriends(ctx context.Context, userId int64, friendQuery *paginate.FriendPaginateQuery) ([]UserWithMetaData, error) {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
-	query := `SELECT 
-    u.id, 
-    u.username,
-    u.email,
-    u.created_at
-FROM 
-    users AS u 
-JOIN 
-    roles AS r 
-ON 
-    u.role_id = r.id 
-WHERE 
-    r.name = $1 
-AND 
-    u.id NOT IN (
-        SELECT 
-            follower_id 
-        FROM 
-            followers 
-        WHERE 
-            user_id = $2 
-    )
-AND
-	u.id != $2
-LIMIT $3 OFFSET $4;
+	query := `SELECT
+	u.id,
+	u.username,
+	u.email,
+	u.created_at,
+	u.is_active,
+	CASE
+		WHEN f.follower_id IS NOT NULL THEN TRUE
+		ELSE FALSE
+	END AS follower_or_not
+FROM
+	users u
+	LEFT JOIN followers f ON u.id = f.follower_id
+	AND f.user_id = $1
+	JOIN roles AS r ON u.role_id = r.id
+WHERE
+	u.id != $1 
+	AND r.name = $2 
+	AND (
+	u.username ILIKE '%' || $3 || '%'
+	)
+LIMIT $4
+OFFSET $5;
 `
-	rows, err := s.db.QueryContext(ctx, query, friendQuery.Role, userId, friendQuery.Limit, friendQuery.Offset)
+	rows, err := s.db.QueryContext(ctx, query, userId, friendQuery.Role, friendQuery.Search, friendQuery.Limit, friendQuery.Offset)
 	if err != nil {
 		return nil, err
 	}
-	list := []User{}
+	list := []UserWithMetaData{}
 	for rows.Next() {
-		var u User
-		err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.CreatedAt)
+		var u UserWithMetaData
+		err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.CreatedAt, &u.IsActive, &u.Follower)
 		if err != nil {
 			return nil, err
 		}

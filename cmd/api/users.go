@@ -43,7 +43,7 @@ func (app *application) followUserHandler(res http.ResponseWriter, req *http.Req
 }
 func (app *application) unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
 	follower := getUserFromContext(req)
-	followee := getUserFromContext(req)
+	followee := getAuthUser(req)
 	ctx := req.Context()
 	err := app.store.Followers.Unfollow(ctx, followee.ID, follower.ID)
 	if err != nil {

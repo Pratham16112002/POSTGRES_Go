@@ -43,6 +43,6 @@ func (m *MockUserStore) createUserInvitation(ctx context.Context, tx *sql.Tx, to
 	return nil
 }
 
-func (m *MockUserStore) SearchFriends(ctx context.Context, userId int64, friendQuery *paginate.FriendPaginateQuery) ([]User, error) {
+func (m *MockUserStore) SearchFriends(ctx context.Context, userId int64, friendQuery *paginate.FriendPaginateQuery) ([]UserWithMetaData, error) {
 	return nil, nil
 }
